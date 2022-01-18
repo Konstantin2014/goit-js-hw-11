@@ -1,63 +1,81 @@
-import getWeatherByCoords from './js/weatherBycoords';
-import { getRefs } from './js/getRefs';
-import locationName from './js/locationName';
-import getBackgroundByName from './js/getBackgroundByName';
-import { Skycons } from './js/skycons';
-import getWeatherByCity from './js/weatherByCity';
+import Notiflix from 'notiflix';
 
-const refs = getRefs();
+import GalleryApiService from './js/api-service';
+import galleryCardTpl from './templates/gallery-card.hbs';
+
+import SimpleLightbox from 'simplelightbox';
+
+import 'simplelightbox/dist/simple-lightbox.min.css';
+
 import './css/common.css';
 
-refs.form.addEventListener('submit', onSubmit);
-
-function onSubmit(e) {
-  e.preventDefault();
-  const city = e.currentTarget.elements.input.value;
-  getWeatherByCity(city).then(renderWeather);
-  renderBackground(city);
-}
-
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(position => {
-    const long = position?.coords?.longitude;
-    const lat = position?.coords?.latitude;
-    getWeatherByCoords(lat, long).then(renderWeather);
-    locationName(lat, long).then(data => {
-      const place = data.results[0].components?.village || data.results[0].components?.city;
-      renderBackground(place);
-    });
-  });
-}
-const stateWeather = {
-  clouds: 'PARTLY_CLOUDY_DAY',
+const refs = {
+  form: document.querySelector('.search-form'),
+  container: document.querySelector('.gallery'),
+  loadMore: document.querySelector('.load-more'),
 };
 
-function setSkycon(icon) {
-  const skycons = new Skycons({ color: 'lightblue' });
-  const updateIcon = icon.toUpperCase();
-  console.log(updateIcon);
-  skycons.set(refs.skycon, Skycons.PARTLY_CLOUDY_NIGHT);
-  skycons.play();
+const galleryApiService = new GalleryApiService();
+let sumHits = galleryApiService.perPage;
+
+let gallery = new SimpleLightbox('.gallery a');
+
+refs.form.addEventListener('submit', onSearch);
+refs.loadMore.addEventListener('click', onLoadMore);
+refs.loadMore.classList.add('is-hidden');
+
+function onSearch(e) {
+  e.preventDefault();
+
+  if (!refs.loadMore.classList.contains('is-hidden')) {
+    refs.loadMore.classList.add('is-hidden');
+  }
+
+  galleryApiService.searchQuery = e.currentTarget.elements.searchQuery.value;
+  galleryApiService.resetPage();
+  galleryApiService.getImages().then(images => {
+    if (images.hits.length === 0 || galleryApiService.searchQuery.trim() === '') {
+      return Notiflix.Notify.info(
+        'Sorry, there are no images matching your search query. Please try again.',
+      );
+    }
+    resetRenderGallery();
+    renderGallery(images.hits);
+    scrollWindow(images.hits.length / 4);
+    gallery.refresh();
+    refs.loadMore.classList.remove('is-hidden');
+    Notiflix.Notify.info(`Hooray! We found ${images.totalHits} images.`);
+  });
 }
 
-function renderWeather(data) {
-  refs.tempDegree.textContent = Math.round(data.main.temp);
-  refs.location.textContent = data.name;
-  refs.tempDesc.textContent = data.weather[0].main;
-  setSkycon(data.weather[0].main);
-  refs.icon.src = `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+function onLoadMore() {
+  galleryApiService.getImages().then(images => {
+    sumHits += images.hits.length;
+    if (images.totalHits === sumHits) {
+      refs.loadMore.classList.add('is-hidden');
+      Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
+    }
+    renderGallery(images.hits);
+    scrollWindow(images.hits.length / 4);
+    gallery.refresh();
+  });
 }
 
-//'clear sky', 'few clouds','scattered clouds',"broken clouds","shower rain",'rain','thunderstorm','snow','mist'
-//clear-day,clear-night,partly-cloudy-day,partly-cloudy-night,cloudy,rain,sleet,snow,wind,fog
+function renderGallery(images) {
+  refs.container.insertAdjacentHTML('beforeend', galleryCardTpl(images));
+}
 
-function renderBackground(place) {
-  getBackgroundByName(place).then(data => {
-    const randomIntegerFromInterval = (min, max) => {
-      return Math.floor(Math.random() * (max - min + 1) + min);
-    };
-    const randomImg = randomIntegerFromInterval(0, data.hits.length - 1);
-    document.body.style = `background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.9)),
-  url('${data.hits[randomImg].largeImageURL}') center fixed; background-size: cover;`;
+function resetRenderGallery() {
+  refs.container.innerHTML = '';
+}
+
+function scrollWindow(count) {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * count + cardHeight,
+    behavior: 'smooth',
   });
 }
