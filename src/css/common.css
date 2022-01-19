@@ -7,6 +7,9 @@
 .search-form {
   display: flex;
   justify-content: center;
+  background-color: rgb(23, 43, 223);
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 input[type='text'] {
@@ -20,16 +23,12 @@ input[type='text'] {
   border-radius: 5px;
   margin-left: 5px;
   padding: 10px;
-  background: #2196f3;
-  color: white;
+  background: #d7e1e9;
+  color: rgb(0, 0, 0);
   font-size: 17px;
   border: 1px solid grey;
   border-left: none;
   cursor: pointer;
-}
-
-button:hover {
-  background: #0b7dda;
 }
 
 .gallery {
@@ -75,12 +74,12 @@ img {
 
   text-transform: uppercase;
 
-  border-radius: 5px;
+  border-radius: 3px;
   padding: 10px;
-  background: #2196f3;
+  background: #074f8a;
   color: white;
-  font-size: 50px;
-  border: 1px solid grey;
+  font-size: 30px;
+  border: 1px solid black;
   border-left: none;
   cursor: pointer;
 }
